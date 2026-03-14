@@ -3,10 +3,6 @@
 import React, { useState, useEffect } from "react"
 import { createClient } from "@supabase/supabase-js"
 
-// =============================
-// SUPABASE CONNECTION
-// =============================
-
 const SUPABASE_URL = "https://qtghfentqazqwtlywjgq.supabase.co"
 
 const SUPABASE_ANON_KEY =
@@ -14,303 +10,141 @@ const SUPABASE_ANON_KEY =
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-
-// =============================
-// COMPONENT
-// =============================
-
 export default function Rematra() {
 
-  const [mounted, setMounted] = useState(false)
+const [mounted,setMounted] = useState(false)
 
-  const [role, setRole] =
-  useState<"home" | "buyer" | "seller" | "dashboard">("home")
+const [role,setRole] =
+useState<"home" | "buyer" | "seller">("home")
 
-  const [materials, setMaterials] = useState<any[]>([])
+const [materials,setMaterials] = useState<any[]>([])
 
-  const [loading, setLoading] = useState(false)
+const [search,setSearch] = useState("")
 
-  const [loadingData, setLoadingData] = useState(true)
+const [userLocation,setUserLocation] = useState<any>(null)
 
-  const [search, setSearch] = useState("")
+const [loadingData,setLoadingData] = useState(true)
 
-  const [userLocation, setUserLocation] = useState<any>(null)
 
-  const [selectedItem, setSelectedItem] = useState<any>(null)
 
-  const [courierStep, setCourierStep] =
-  useState<"selection" | "payment">("selection")
+useEffect(()=>{
 
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
+setMounted(true)
 
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+fetchMaterials()
 
-  const [form, setForm] = useState({
-    name: "",
-    price: "",
-    bank: "",
-    rekening: "",
-    atasNama: "",
-    wa: ""
-  })
+if(navigator.geolocation){
 
-// =============================
-// INITIAL LOAD
-// =============================
+navigator.geolocation.getCurrentPosition(
 
-  useEffect(() => {
+(p)=>{
 
-    setMounted(true)
+setUserLocation({
+lat:p.coords.latitude,
+lng:p.coords.longitude
+})
 
-    fetchMaterials()
+},
 
-    if (navigator.geolocation) {
+()=>console.log("GPS denied")
 
-      navigator.geolocation.getCurrentPosition(
+)
 
-        (p) =>
-          setUserLocation({
-            lat: p.coords.latitude,
-            lng: p.coords.longitude
-          }),
+}
 
-        () => console.log("Location permission denied")
+},[])
 
-      )
 
-    }
 
-  }, [])
+async function fetchMaterials(){
 
+setLoadingData(true)
 
+const {data} = await supabase
+.from("materials")
+.select("*")
+.order("id",{ascending:false})
+.limit(50)
 
-// =============================
-// FETCH MATERIALS
-// =============================
+if(data) setMaterials(data)
 
-  async function fetchMaterials() {
+setLoadingData(false)
 
-    setLoadingData(true)
+}
 
-    const { data, error } = await supabase
-      .from("materials")
-      .select("*")
-      .order("id", { ascending: false })
-      .limit(50)
 
-    if (!error && data) setMaterials(data)
 
-    setLoadingData(false)
-  }
+function getDistance(lat1:number,lon1:number,lat2:number,lon2:number){
 
+const R=6371
 
+const dLat=(lat2-lat1)*Math.PI/180
+const dLon=(lon2-lon1)*Math.PI/180
 
-// =============================
-// DISTANCE CALCULATION
-// =============================
+const a=
+Math.sin(dLat/2)*Math.sin(dLat/2)+
+Math.cos(lat1*Math.PI/180)*
+Math.cos(lat2*Math.PI/180)*
+Math.sin(dLon/2)*
+Math.sin(dLon/2)
 
-  function getDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) {
+return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))
 
-    const R = 6371
+}
 
-    const dLat = (lat2 - lat1) * Math.PI / 180
-    const dLon = (lon2 - lon1) * Math.PI / 180
 
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) *
-      Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2)
 
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  }
+if(!mounted) return null
 
 
 
-// =============================
-// FILE UPLOAD HANDLER
-// =============================
+return(
 
-  const handleFileChange =
-  (e: React.ChangeEvent<HTMLInputElement>) => {
+<div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
 
-    const file = e.target.files?.[0]
 
-    if (!file) return
 
-    setPhotoFile(file)
+{/* ================= HEADER ================= */}
 
-    setPhotoPreview(URL.createObjectURL(file))
-  }
+<header className="bg-[#EE4D2D] text-white pt-10 pb-14 px-6 shadow-xl rounded-b-[40px]">
 
-
-
-// =============================
-// PUBLISH MATERIAL
-// =============================
-
-  const handlePublish = async () => {
-
-    if (!form.name || !form.price || !form.rekening || !photoFile) {
-
-      alert("Mohon lengkapi data & foto!")
-
-      return
-    }
-
-    setLoading(true)
-
-    navigator.geolocation.getCurrentPosition(
-
-      async (p) => {
-
-        try {
-
-          const fileExt = photoFile.name.split(".").pop()
-
-          const fileName =
-          `${Date.now()}-${Math.random()}.${fileExt}`
-
-          const filePath = `uploads/${fileName}`
-
-          const { error: uploadError } =
-          await supabase.storage
-          .from("material-photos")
-          .upload(filePath, photoFile)
-
-          if (uploadError) {
-
-            alert("Gagal Upload Foto: " + uploadError.message)
-
-            setLoading(false)
-
-            return
-          }
-
-          const {
-            data: { publicUrl }
-          } = supabase
-          .storage
-          .from("material-photos")
-          .getPublicUrl(filePath)
-
-          const { error: dbError } =
-          await supabase.from("materials").insert([{
-
-            ...form,
-
-            price: Number(form.price),
-
-            photo: publicUrl,
-
-            lat: p.coords.latitude,
-
-            lng: p.coords.longitude,
-
-            status: "tersedia"
-
-          }])
-
-          if (dbError) {
-
-            alert("Gagal Simpan Data: " + dbError.message)
-
-          } else {
-
-            fetchMaterials()
-
-            alert("ALHAMDULILLAH TERBIT!")
-
-            setRole("dashboard")
-
-            setPhotoFile(null)
-
-            setPhotoPreview(null)
-
-          }
-
-        } catch (err) {
-
-          console.error(err)
-
-        }
-
-        setLoading(false)
-
-      },
-
-      () => alert("GPS Wajib Aktif!"),
-
-      { timeout: 5000 }
-
-    )
-  }
-
-
-
-// =============================
-// RENDER BLOCK
-// =============================
-
-  if (!mounted) return null
-
-
-
-  return (
-
-<div className="min-h-screen bg-gray-50 text-gray-900 pb-20 font-sans">
-
-{/* ============================= */}
-{/* HEADER */}
-{/* ============================= */}
-
-<header
-style={{ backgroundColor: "#EE4D2D" }}
-className="text-white py-12 px-6 text-center shadow-2xl rounded-b-[4rem] border-b-8 border-black/10"
->
+<div className="max-w-5xl mx-auto text-center">
 
 <img
 src="/Logo.jpeg"
-alt="Logo"
-className="h-20 mx-auto mb-4 rounded-3xl border-4 border-white/20 shadow-2xl"
-onClick={() => setRole("home")}
+className="h-20 mx-auto mb-4 rounded-2xl shadow-lg cursor-pointer"
+onClick={()=>setRole("home")}
 />
 
-<h1 className="text-5xl font-black italic tracking-tighter uppercase">
+<h1 className="text-4xl md:text-5xl font-black italic tracking-tight">
 REMATRA
 </h1>
 
-<div className="bg-black/20 p-3 rounded-2xl inline-block border border-white/10 mt-3 mx-4">
-<p className="text-sm font-bold leading-tight text-white/90 italic">
-Sisa proyek & puing jadi berkah, Harga pas, Langsung angkut!
+<p className="mt-3 text-sm font-semibold opacity-90">
+Sisa proyek & puing jadi berkah • Harga pas • Langsung angkut
 </p>
-</div>
 
-<div className="flex gap-4 justify-center mt-12 px-4 max-w-md mx-auto">
+
+
+<div className="flex gap-4 justify-center mt-8 max-w-sm mx-auto">
 
 <button
-onClick={() => setRole("buyer")}
-className={`flex-1 py-5 rounded-full font-black text-xs shadow-2xl transition-all
-${role === "buyer"
-? "bg-white text-[#EE4D2D] scale-110"
-: "bg-transparent border-2 border-white text-white opacity-70"}
+onClick={()=>setRole("buyer")}
+className={`flex-1 py-3 rounded-full font-bold text-sm shadow-md transition
+${role==="buyer"
+?"bg-white text-[#EE4D2D]"
+:"border border-white text-white"}
 `}
 >
 CARI BARANG
 </button>
 
 <button
-onClick={() => setRole("seller")}
-className={`flex-1 py-5 rounded-full font-black text-xs shadow-2xl transition-all
-${role === "seller"
-? "bg-white text-[#EE4D2D] scale-110"
-: "bg-transparent border-2 border-white text-white opacity-70"}
+onClick={()=>setRole("seller")}
+className={`flex-1 py-3 rounded-full font-bold text-sm shadow-md transition
+${role==="seller"
+?"bg-white text-[#EE4D2D]"
+:"border border-white text-white"}
 `}
 >
 JUAL BARANG
@@ -318,141 +152,194 @@ JUAL BARANG
 
 </div>
 
+</div>
+
 </header>
 
 
 
-{/* ============================= */}
-{/* MAIN */}
-{/* ============================= */}
+{/* ================= MAIN ================= */}
 
-<main className="max-w-5xl mx-auto p-6 mt-[-2rem]">
+<main className="max-w-5xl mx-auto px-6 py-10">
 
-{/* ============================= */}
-{/* BUYER VIEW */}
-{/* ============================= */}
 
-{role === "buyer" && (
 
-<div className="space-y-8">
+{/* HOME */}
 
-<div className="relative shadow-2xl rounded-3xl overflow-hidden bg-white">
+{role==="home" && (
 
-<input
-placeholder="Cari material sisa..."
-className="w-full pl-14 pr-6 py-6 outline-none text-lg font-bold"
-onChange={(e)=>setSearch(e.target.value)}
-/>
+<div className="text-center py-16">
 
-<span className="absolute left-6 top-6 text-xl opacity-40">🔍</span>
+<h2 className="text-3xl md:text-4xl font-black italic mb-2">
+CARI CUAN PROYEK?
+</h2>
+
+<p className="text-gray-500 text-sm mb-10">
+Arsitek.Sign × REMATRA
+</p>
+
+
+
+<div className="grid grid-cols-2 gap-6 max-w-xs mx-auto">
+
+<div
+onClick={()=>setRole("buyer")}
+className="bg-white p-8 rounded-3xl shadow-lg cursor-pointer hover:scale-105 transition"
+>
+
+<div className="text-4xl mb-3">🛒</div>
+
+<p className="font-bold text-sm uppercase text-gray-500">
+Beli
+</p>
 
 </div>
 
 
-{loadingData && (
-<p className="text-center text-gray-400">
-Memuat material...
+
+<div
+onClick={()=>setRole("seller")}
+className="bg-white p-8 rounded-3xl shadow-lg cursor-pointer hover:scale-105 transition"
+>
+
+<div className="text-4xl mb-3">🏗️</div>
+
+<p className="font-bold text-sm uppercase text-gray-500">
+Jual
 </p>
+
+</div>
+
+</div>
+
+</div>
+
 )}
 
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+{/* ================= BUYER ================= */}
+
+{role==="buyer" && (
+
+<div className="space-y-8">
+
+<div className="bg-white rounded-2xl shadow p-4">
+
+<input
+placeholder="Cari material..."
+className="w-full p-3 outline-none"
+onChange={(e)=>setSearch(e.target.value)}
+/>
+
+</div>
+
+
+
+{loadingData && (
+
+<p className="text-center text-gray-400">
+Memuat material...
+</p>
+
+)}
+
+
+
+<div className="grid md:grid-cols-2 gap-6">
 
 {materials
 
 .filter(m =>
-(m.name || "")
+(m.name||"")
 .toLowerCase()
 .includes(search.toLowerCase())
 )
 
-.filter(m => {
+.filter(m=>{
 
 if(!userLocation) return true
 
 if(!m.lat || !m.lng) return false
 
-const d =
-getDistance(
+const d=getDistance(
 userLocation.lat,
 userLocation.lng,
 m.lat,
 m.lng
 )
 
-return d <= 15
+return d<=15
 
 })
 
-.map(item => {
+.map(item=>{
 
-const dist =
-userLocation
-? getDistance(
+const dist=userLocation?
+getDistance(
 userLocation.lat,
 userLocation.lng,
 item.lat,
 item.lng
-)
-: null
+):null
 
 
-return (
+
+return(
 
 <div
 key={item.id}
-className="bg-white rounded-[3.5rem] overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+className="bg-white rounded-3xl shadow-lg overflow-hidden"
 >
 
-<div className="h-64 bg-gray-200 relative">
+<div className="h-52 bg-gray-200">
 
 {item.photo &&
+
 <img
 src={item.photo}
 className="w-full h-full object-cover"
 />
+
 }
 
-<div className="absolute top-6 left-6 bg-[#EE4D2D] text-white text-[10px] px-4 py-2 rounded-full font-black uppercase">
-{item.status}
-</div>
-
-{dist !== null && (
-
-<div className="absolute top-6 right-6 bg-black/50 text-white text-[9px] px-3 py-1.5 rounded-full font-black italic">
-📍 {dist.toFixed(1)} KM
-</div>
-
-)}
-
 </div>
 
 
-<div className="p-8">
 
-<h3 className="font-black italic text-2xl uppercase tracking-tighter mb-2">
+<div className="p-6">
+
+<h3 className="font-bold text-lg mb-1">
 {item.name}
 </h3>
 
-<p className="text-4xl font-black text-[#EE4D2D] mb-8">
+<p className="text-[#EE4D2D] text-2xl font-black mb-4">
 Rp {item.price?.toLocaleString()}
 </p>
 
 
-<div className="flex gap-3">
+
+{dist &&(
+
+<p className="text-xs text-gray-400 mb-3">
+📍 {dist.toFixed(1)} km
+</p>
+
+)}
+
+
+
+<div className="flex gap-2">
 
 <button
-onClick={()=>setSelectedItem(item)}
-className="flex-[3] bg-[#EE4D2D] text-white py-5 rounded-[2rem] font-black text-sm"
+className="flex-1 bg-[#EE4D2D] text-white py-3 rounded-xl font-bold"
 >
-BELI VIA ESCROW
+BELI
 </button>
 
 <button
-onClick={() =>
-window.open(`https://wa.me/${item.wa}`)
-}
-className="flex-1 bg-green-500 text-white py-5 rounded-[2rem] font-black text-sm"
+onClick={()=>window.open(`https://wa.me/${item.wa}`)}
+className="bg-green-500 text-white px-4 rounded-xl"
 >
 WA
 </button>
@@ -476,9 +363,14 @@ WA
 </main>
 
 
-<footer className="text-center py-12 opacity-30 font-black text-[9px] uppercase italic tracking-[0.5em] text-gray-400">
+
+<footer className="text-center text-xs text-gray-400 py-10">
+
 Arsitek.sign • 2026
+
 </footer>
+
+
 
 </div>
 
