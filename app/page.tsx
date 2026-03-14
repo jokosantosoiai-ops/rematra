@@ -1,379 +1,191 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { createClient } from "@supabase/supabase-js"
+import { useState } from "react"
 
-const SUPABASE_URL = "https://qtghfentqazqwtlywjgq.supabase.co"
+export default function Home() {
 
-const SUPABASE_ANON_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0Z2hmZW50cWF6cXd0bHl3amdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTAyMzgsImV4cCI6MjA4ODc2NjIzOH0.YErwfMEGBlVlVoYCC2MA6Kd3GXunCGWLAQBnz6VwqGE"
+  const [role, setRole] = useState<string | null>(null)
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  return (
+    <main className="min-h-screen bg-gray-50 text-gray-800 flex flex-col">
 
-export default function Rematra() {
+      {/* HEADER */}
+      <header className="w-full bg-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
 
-const [mounted,setMounted] = useState(false)
+          <h1 className="text-2xl font-bold text-orange-600">
+            REMATRA
+          </h1>
 
-const [role,setRole] =
-useState<"home" | "buyer" | "seller">("home")
+          <nav className="flex items-center gap-6 text-sm font-medium">
+            <a href="#" className="hover:text-orange-500 transition">Home</a>
+            <a href="#" className="hover:text-orange-500 transition">Marketplace</a>
+            <a href="#" className="hover:text-orange-500 transition">Cara Kerja</a>
+            <a href="#" className="hover:text-orange-500 transition">Login</a>
+          </nav>
 
-const [materials,setMaterials] = useState<any[]>([])
+        </div>
+      </header>
 
-const [search,setSearch] = useState("")
 
-const [userLocation,setUserLocation] = useState<any>(null)
+      {/* HERO */}
+      <section className="flex-1">
 
-const [loadingData,setLoadingData] = useState(true)
+        <div className="max-w-6xl mx-auto px-6 py-16 text-center">
 
+          <h2 className="text-4xl font-bold mb-6 leading-tight">
+            Marketplace Material Sisa Konstruksi
+          </h2>
 
+          <p className="text-gray-600 max-w-2xl mx-auto mb-10">
+            Platform untuk menjual dan membeli material sisa proyek konstruksi
+            secara aman menggunakan sistem rekening bersama.
+          </p>
 
-useEffect(()=>{
+          {/* ROLE SELECT */}
+          <div className="flex justify-center gap-6 flex-wrap">
 
-setMounted(true)
+            <button
+              onClick={() => setRole("pembeli")}
+              className="bg-orange-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-600 transition"
+            >
+              Saya Pembeli
+            </button>
 
-fetchMaterials()
+            <button
+              onClick={() => setRole("penjual")}
+              className="bg-gray-800 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition"
+            >
+              Saya Penjual
+            </button>
 
-if(navigator.geolocation){
+          </div>
 
-navigator.geolocation.getCurrentPosition(
+        </div>
 
-(p)=>{
+      </section>
 
-setUserLocation({
-lat:p.coords.latitude,
-lng:p.coords.longitude
-})
 
-},
+      {/* FITUR PEMBELI */}
+      {role === "pembeli" && (
 
-()=>console.log("GPS denied")
+        <section className="max-w-6xl mx-auto px-6 py-12 w-full">
 
-)
+          <h3 className="text-2xl font-semibold mb-8 text-center">
+            Fitur Pembeli
+          </h3>
 
-}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-},[])
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h4 className="font-semibold mb-2">
+                Cari Material
+              </h4>
 
+              <p className="text-sm text-gray-600">
+                Temukan material sisa proyek seperti keramik, besi,
+                cat, kabel, dan lainnya.
+              </p>
+            </div>
 
 
-async function fetchMaterials(){
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h4 className="font-semibold mb-2">
+                Filter Radius 15KM
+              </h4>
 
-setLoadingData(true)
+              <p className="text-sm text-gray-600">
+                Sistem menampilkan material terdekat
+                untuk menghemat biaya transportasi.
+              </p>
+            </div>
 
-const {data} = await supabase
-.from("materials")
-.select("*")
-.order("id",{ascending:false})
-.limit(50)
 
-if(data) setMaterials(data)
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h4 className="font-semibold mb-2">
+                Pembayaran Aman
+              </h4>
 
-setLoadingData(false)
+              <p className="text-sm text-gray-600">
+                Pembayaran melalui rekening bersama
+                sebelum barang diambil.
+              </p>
+            </div>
 
-}
+          </div>
 
+        </section>
 
+      )}
 
-function getDistance(lat1:number,lon1:number,lat2:number,lon2:number){
 
-const R=6371
+      {/* FITUR PENJUAL */}
+      {role === "penjual" && (
 
-const dLat=(lat2-lat1)*Math.PI/180
-const dLon=(lon2-lon1)*Math.PI/180
+        <section className="max-w-6xl mx-auto px-6 py-12 w-full">
 
-const a=
-Math.sin(dLat/2)*Math.sin(dLat/2)+
-Math.cos(lat1*Math.PI/180)*
-Math.cos(lat2*Math.PI/180)*
-Math.sin(dLon/2)*
-Math.sin(dLon/2)
+          <h3 className="text-2xl font-semibold mb-8 text-center">
+            Fitur Penjual
+          </h3>
 
-return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-}
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h4 className="font-semibold mb-2">
+                Upload Material
+              </h4>
 
+              <p className="text-sm text-gray-600">
+                Foto dan deskripsikan material sisa proyek Anda.
+              </p>
+            </div>
 
 
-if(!mounted) return null
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h4 className="font-semibold mb-2">
+                Harga Fleksibel
+              </h4>
 
+              <p className="text-sm text-gray-600">
+                Tentukan harga jual sesuai kondisi material.
+              </p>
+            </div>
 
 
-return(
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h4 className="font-semibold mb-2">
+                Jual Lebih Cepat
+              </h4>
 
-<div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <p className="text-sm text-gray-600">
+                Jangkau pembeli di sekitar lokasi proyek Anda.
+              </p>
+            </div>
 
+          </div>
 
+        </section>
 
-{/* ================= HEADER ================= */}
+      )}
 
-<header className="bg-[#EE4D2D] text-white pt-10 pb-14 px-6 shadow-xl rounded-b-[40px]">
 
-<div className="max-w-5xl mx-auto text-center">
+      {/* FOOTER */}
+      <footer className="bg-gray-900 text-gray-300 mt-auto">
 
-<img
-src="/Logo.jpeg"
-className="h-20 mx-auto mb-4 rounded-2xl shadow-lg cursor-pointer"
-onClick={()=>setRole("home")}
-/>
+        <div className="max-w-6xl mx-auto px-6 py-10 text-center text-sm">
 
-<h1 className="text-4xl md:text-5xl font-black italic tracking-tight">
-REMATRA
-</h1>
+          <p className="mb-2">
+            © {new Date().getFullYear()} REMATRA
+          </p>
 
-<p className="mt-3 text-sm font-semibold opacity-90">
-Sisa proyek & puing jadi berkah • Harga pas • Langsung angkut
-</p>
+          <p className="text-gray-500">
+            Platform Marketplace Material Sisa Konstruksi
+          </p>
 
+        </div>
 
+      </footer>
 
-<div className="flex gap-4 justify-center mt-8 max-w-sm mx-auto">
-
-<button
-onClick={()=>setRole("buyer")}
-className={`flex-1 py-3 rounded-full font-bold text-sm shadow-md transition
-${role==="buyer"
-?"bg-white text-[#EE4D2D]"
-:"border border-white text-white"}
-`}
->
-CARI BARANG
-</button>
-
-<button
-onClick={()=>setRole("seller")}
-className={`flex-1 py-3 rounded-full font-bold text-sm shadow-md transition
-${role==="seller"
-?"bg-white text-[#EE4D2D]"
-:"border border-white text-white"}
-`}
->
-JUAL BARANG
-</button>
-
-</div>
-
-</div>
-
-</header>
-
-
-
-{/* ================= MAIN ================= */}
-
-<main className="max-w-5xl mx-auto px-6 py-10">
-
-
-
-{/* HOME */}
-
-{role==="home" && (
-
-<div className="text-center py-16">
-
-<h2 className="text-3xl md:text-4xl font-black italic mb-2">
-CARI CUAN PROYEK?
-</h2>
-
-<p className="text-gray-500 text-sm mb-10">
-Arsitek.Sign × REMATRA
-</p>
-
-
-
-<div className="grid grid-cols-2 gap-6 max-w-xs mx-auto">
-
-<div
-onClick={()=>setRole("buyer")}
-className="bg-white p-8 rounded-3xl shadow-lg cursor-pointer hover:scale-105 transition"
->
-
-<div className="text-4xl mb-3">🛒</div>
-
-<p className="font-bold text-sm uppercase text-gray-500">
-Beli
-</p>
-
-</div>
-
-
-
-<div
-onClick={()=>setRole("seller")}
-className="bg-white p-8 rounded-3xl shadow-lg cursor-pointer hover:scale-105 transition"
->
-
-<div className="text-4xl mb-3">🏗️</div>
-
-<p className="font-bold text-sm uppercase text-gray-500">
-Jual
-</p>
-
-</div>
-
-</div>
-
-</div>
-
-)}
-
-
-
-{/* ================= BUYER ================= */}
-
-{role==="buyer" && (
-
-<div className="space-y-8">
-
-<div className="bg-white rounded-2xl shadow p-4">
-
-<input
-placeholder="Cari material..."
-className="w-full p-3 outline-none"
-onChange={(e)=>setSearch(e.target.value)}
-/>
-
-</div>
-
-
-
-{loadingData && (
-
-<p className="text-center text-gray-400">
-Memuat material...
-</p>
-
-)}
-
-
-
-<div className="grid md:grid-cols-2 gap-6">
-
-{materials
-
-.filter(m =>
-(m.name||"")
-.toLowerCase()
-.includes(search.toLowerCase())
-)
-
-.filter(m=>{
-
-if(!userLocation) return true
-
-if(!m.lat || !m.lng) return false
-
-const d=getDistance(
-userLocation.lat,
-userLocation.lng,
-m.lat,
-m.lng
-)
-
-return d<=15
-
-})
-
-.map(item=>{
-
-const dist=userLocation?
-getDistance(
-userLocation.lat,
-userLocation.lng,
-item.lat,
-item.lng
-):null
-
-
-
-return(
-
-<div
-key={item.id}
-className="bg-white rounded-3xl shadow-lg overflow-hidden"
->
-
-<div className="h-52 bg-gray-200">
-
-{item.photo &&
-
-<img
-src={item.photo}
-className="w-full h-full object-cover"
-/>
-
-}
-
-</div>
-
-
-
-<div className="p-6">
-
-<h3 className="font-bold text-lg mb-1">
-{item.name}
-</h3>
-
-<p className="text-[#EE4D2D] text-2xl font-black mb-4">
-Rp {item.price?.toLocaleString()}
-</p>
-
-
-
-{dist &&(
-
-<p className="text-xs text-gray-400 mb-3">
-📍 {dist.toFixed(1)} km
-</p>
-
-)}
-
-
-
-<div className="flex gap-2">
-
-<button
-className="flex-1 bg-[#EE4D2D] text-white py-3 rounded-xl font-bold"
->
-BELI
-</button>
-
-<button
-onClick={()=>window.open(`https://wa.me/${item.wa}`)}
-className="bg-green-500 text-white px-4 rounded-xl"
->
-WA
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-)
-
-})}
-
-</div>
-
-</div>
-
-)}
-
-</main>
-
-
-
-<footer className="text-center text-xs text-gray-400 py-10">
-
-Arsitek.sign • 2026
-
-</footer>
-
-
-
-</div>
-
-)
-
+    </main>
+  )
 }
