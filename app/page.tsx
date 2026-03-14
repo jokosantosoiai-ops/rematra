@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react"
 import { createClient } from "@supabase/supabase-js"
 
-// --- KONEKSI CLOUD (DIKUNCI) ---
 const SUPABASE_URL = "https://qtghfentqazqwtlywjgq.supabase.co" 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0Z2hmZW50cWF6cXd0bHl3amdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTAyMzgsImV4cCI6MjA4ODc2NjIzOH0.YErwfMEGBlVlVoYCC2MA6Kd3GXunCGWLAQBnz6VwqGE"
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -68,8 +67,6 @@ export default function Rematra() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#2D3436] pb-20 font-sans selection:bg-[#EE4D2D] selection:text-white">
-      
-      {/* HEADER: Proporsional & Elegan */}
       <header style={{ backgroundColor: '#EE4D2D' }} className="text-white pt-10 pb-14 px-6 text-center shadow-xl rounded-b-[3rem] md:rounded-b-[5rem] border-b-4 border-black/5">
         <img src="/Logo.jpeg" alt="Logo" className="h-16 md:h-20 mx-auto mb-4 rounded-2xl border-2 border-white/30 shadow-lg cursor-pointer active:scale-95 transition-transform" onClick={() => setRole("home")} />
         <h1 className="text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-none">REMATRA</h1>
@@ -82,7 +79,6 @@ export default function Rematra() {
       </header>
 
       <main className="max-w-5xl mx-auto p-4 md:p-8 -mt-8">
-        {/* VIEW: HOME */}
         {role === "home" && (
           <div className="text-center py-16 md:py-24 space-y-10 animate-in fade-in zoom-in duration-500">
             <div className="space-y-2">
@@ -102,7 +98,6 @@ export default function Rematra() {
           </div>
         )}
 
-        {/* VIEW: BUYER (KATALOG) */}
         {role === "buyer" && (
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
             <div className="relative shadow-lg rounded-2xl overflow-hidden bg-white border border-gray-100">
@@ -138,7 +133,6 @@ export default function Rematra() {
           </div>
         )}
 
-        {/* VIEW: SELLER */}
         {role === "seller" && (
           <div className="max-w-md mx-auto bg-white p-8 rounded-[3rem] shadow-xl border-t-[8px] border-[#EE4D2D] space-y-6 animate-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-2xl font-black italic text-center text-[#EE4D2D] uppercase tracking-tighter">Posting Barang</h2>
@@ -161,7 +155,6 @@ export default function Rematra() {
           </div>
         )}
       </main>
-
       <footer className="text-center py-12 opacity-40 font-bold text-[8px] uppercase italic tracking-[0.4em] text-gray-500">Arsitek.sign • 2026</footer>
     </div>
   )
