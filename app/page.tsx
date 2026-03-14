@@ -15,7 +15,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
 
           <h1 className="text-3xl font-bold text-orange-600">
-            REMATRA
+            REMATRA v2
           </h1>
 
           <nav className="flex gap-8 text-sm font-medium">
