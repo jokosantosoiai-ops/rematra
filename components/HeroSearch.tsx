@@ -1,32 +1,50 @@
-<section className="bg-orange-50 py-16">
+"use client"
 
-  <div className="max-w-6xl mx-auto text-center">
+import { useState } from "react"
 
-    <h1 className="text-4xl font-bold mb-6">
-      Marketplace Material Sisa Proyek
-    </h1>
+export default function HeroSearch() {
 
-    <div className="flex gap-3 justify-center">
+  const [keyword, setKeyword] = useState("")
 
-      <input
-        placeholder="Cari Material..."
-        className="border p-3 rounded-lg w-80"
-      />
+  const handleSearch = () => {
+    if (!keyword) return
+    window.location.href = `/marketplace?search=${keyword}`
+  }
 
-      <select className="border p-3 rounded-lg">
+  return (
+    <section className="bg-orange-50 py-16">
 
-        <option>Radius 5km</option>
-        <option>Radius 10km</option>
-        <option>Radius 20km</option>
+      <div className="max-w-6xl mx-auto px-6 text-center">
 
-      </select>
+        <h1 className="text-4xl font-bold mb-4">
+          Marketplace Material Bangunan Terdekat
+        </h1>
 
-      <button className="bg-orange-500 text-white px-6 rounded-lg">
-        Cari
-      </button>
+        <p className="text-gray-600 mb-8">
+          Temukan material sisa proyek berkualitas dengan harga lebih hemat
+        </p>
 
-    </div>
+        <div className="flex gap-3 max-w-xl mx-auto">
 
-  </div>
+          <input
+            type="text"
+            placeholder="Cari bata, semen, besi..."
+            className="flex-1 border rounded-lg px-4 py-3"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
 
-</section>
+          <button
+            onClick={handleSearch}
+            className="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600"
+          >
+            Cari
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+  )
+}
