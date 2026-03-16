@@ -1,4 +1,4 @@
-import HeroSearch from "@/components/HeroSearch"
+import HeroSearch from "@/components/Home/HeroSearch"
 import MaterialGrid from "@/components/MaterialGrid"
 
 export default function Home() {
