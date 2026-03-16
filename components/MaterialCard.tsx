@@ -1,6 +1,4 @@
-"use client"
-
-interface MaterialCardProps {
+type MaterialCardProps = {
   title: string
   price: number
   location: string
@@ -11,11 +9,10 @@ export default function MaterialCard({
   title,
   price,
   location,
-  image
+  image,
 }: MaterialCardProps) {
-
   return (
-    <div className="border rounded-xl shadow hover:shadow-lg">
+    <div className="bg-white rounded-xl shadow hover:shadow-lg transition">
 
       <img
         src={image}
