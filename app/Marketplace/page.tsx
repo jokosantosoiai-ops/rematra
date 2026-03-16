@@ -1,41 +1,32 @@
-import HeroSearch from "@/components/Home/HeroSearch"
-import ValueProposition from "@/components/Home/ValueProposition"
-import HowItWorks from "@/components/Home/HowItWorks"
-import MaterialGrid from "@/components/MaterialGrid"
+import { getMaterials } from "@/lib/getMaterials"
 
-export default function Home() {
+export default async function MarketplacePage() {
+
+  const materials = await getMaterials()
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <div className="grid grid-cols-3 gap-6 p-6">
 
-      {/* HERO SEARCH */}
-      <HeroSearch />
+      {materials.map((item:any) => (
 
-      {/* VALUE PROPOSITION */}
-      <ValueProposition />
+        <div key={item.id} className="border rounded-xl p-4">
 
-      {/* HOW IT WORKS */}
-      <HowItWorks />
-
-      {/* MATERIAL LIST */}
-      <section className="max-w-6xl mx-auto px-6 py-16">
-
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">
-            Material Terbaru
+          <h2 className="font-bold text-lg">
+            {item.title}
           </h2>
 
-          <a
-            href="/marketplace"
-            className="text-orange-500 hover:underline"
-          >
-            Lihat Semua
-          </a>
+          <p className="text-gray-500">
+            {item.location}
+          </p>
+
+          <p className="text-orange-600 font-semibold">
+            Rp {item.price}
+          </p>
+
         </div>
 
-        <MaterialGrid />
+      ))}
 
-      </section>
-
-    </main>
+    </div>
   )
 }
