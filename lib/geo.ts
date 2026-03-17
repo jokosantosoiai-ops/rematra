@@ -1,21 +1,12 @@
-export function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-) {
-  const R = 6371 // radius bumi km
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
+import { supabase } from '@/lib/supabase'
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) *
-      Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2)
+async function fetchNearMaterials(lat: number, lng: number) {
+  const { data, error } = await supabase.rpc('get_nearby_materials', {
+    user_lat: lat,
+    user_lng: lng,
+    radius_meters: 15000 // 15 KM
+  });
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-
-  return R * c
+  if (error) console.error(error);
+  return data;
 }
