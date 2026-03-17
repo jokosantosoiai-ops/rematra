@@ -1,22 +1,22 @@
-"use client"
+import Link from "next/link"
 
 export default function Home() {
   return (
-    <div style={{ padding: 40 }}>
-      <h1>TEST REMATRA</h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">
+        REMATRA Marketplace
+      </h1>
 
-      <button
-        onClick={() => alert("Hidup!")}
-        style={{
-          padding: "12px 20px",
-          background: "blue",
-          color: "white",
-          borderRadius: "8px",
-          marginTop: "20px"
-        }}
+      <p className="mt-2">
+        Platform jual beli material konstruksi terdekat
+      </p>
+
+      <Link
+        href="/marketplace"
+        className="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded"
       >
-        TEST BUTTON
-      </button>
+        Masuk ke Marketplace
+      </Link>
     </div>
   )
 }

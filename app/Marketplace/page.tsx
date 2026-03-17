@@ -11,6 +11,7 @@ type Material = {
   image_url: string
   latitude: number
   longitude: number
+  phone: string
 }
 
 export default function MarketplacePage() {
@@ -23,8 +24,38 @@ export default function MarketplacePage() {
     lng: number
   } | null>(null)
 
-  // 🔥 Ambil data dari Supabase
+  // ==============================
+  // HITUNG JARAK (KM)
+  // ==============================
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
+    const R = 6371
+    const dLat = ((lat2 - lat1) * Math.PI) / 180
+    const dLon = ((lon2 - lon1) * Math.PI) / 180
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  // ==============================
+  // FETCH DATA
+  // ==============================
   const fetchMaterials = async () => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase
       .from("materials")
       .select("*")
@@ -38,8 +69,36 @@ export default function MarketplacePage() {
     setLoading(false)
   }
 
-  // 🔥 Ambil lokasi user
-  const getLocation = () => {
+  // ==============================
+  // REALTIME UPDATE 🔥
+  // ==============================
+  useEffect(() => {
+    if (!supabase) return
+
+    const channel = supabase
+      .channel("materials-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "materials",
+        },
+        () => {
+          fetchMaterials()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // ==============================
+  // GET USER LOCATION
+  // ==============================
+  useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserLocation({
@@ -47,79 +106,65 @@ export default function MarketplacePage() {
           lng: pos.coords.longitude,
         })
       },
-      (err) => {
-        console.error("Location error:", err)
+      () => {
+        setFiltered(materials)
       }
     )
-  }
+  }, [])
 
-  // 🔥 Hitung jarak (KM)
-  const calculateDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) => {
-    const R = 6371
-    const dLat = ((lat2 - lat1) * Math.PI) / 180
-    const dLon = ((lon2 - lon1) * Math.PI) / 180
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2)
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-
-    return R * c
-  }
-
-  // 🔥 Filter radius 15 KM
+  // ==============================
+  // FILTER + SORT 🔥
+  // ==============================
   useEffect(() => {
-    if (!userLocation) return
+    if (!userLocation) {
+      setFiltered(materials)
+      return
+    }
 
-    const result = materials.filter((item) => {
-      const distance = calculateDistance(
-        userLocation.lat,
-        userLocation.lng,
-        item.latitude,
-        item.longitude
-      )
+    const result = materials
+      .map((item) => {
+        const distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          item.latitude,
+          item.longitude
+        )
 
-      return distance <= 15
-    })
+        return { ...item, distance }
+      })
+      .filter((item) => item.distance <= 15)
+      .sort((a, b) => a.distance - b.distance)
 
     setFiltered(result)
-  }, [userLocation, materials])
+  }, [materials, userLocation])
 
   useEffect(() => {
     fetchMaterials()
-    getLocation()
   }, [])
 
+  // ==============================
+  // LOADING
+  // ==============================
   if (loading) return <p className="p-4">Loading...</p>
+
+  if (!supabase) {
+    return <p className="p-4">Supabase belum terkoneksi</p>
+  }
 
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">
-        Marketplace REMATRA (Radius 15 KM)
+        Marketplace REMATRA (Terdekat 15 KM)
       </h1>
 
-      {filtered.length === 0 && (
-        <p>Tidak ada material di sekitar Anda</p>
-      )}
-
       <div className="grid grid-cols-2 gap-4">
-        {filtered.map((item) => (
+        {filtered.map((item: any) => (
           <div
             key={item.id}
             className="border rounded-xl p-2 shadow"
           >
             <img
               src={item.image_url}
-              alt={item.title}
               className="w-full h-32 object-cover rounded"
             />
 
@@ -131,9 +176,24 @@ export default function MarketplacePage() {
               {item.description}
             </p>
 
-            <p className="font-bold mt-1">
+            <p className="font-bold">
               Rp {item.price.toLocaleString()}
             </p>
+
+            {item.distance && (
+              <p className="text-xs text-green-600">
+                {item.distance.toFixed(2)} KM
+              </p>
+            )}
+
+            {/* 🔥 WHATSAPP BUTTON */}
+            <a
+              href={`https://wa.me/${item.phone}`}
+              target="_blank"
+              className="block mt-2 bg-green-500 text-white text-center py-1 rounded"
+            >
+              Hubungi Seller
+            </a>
           </div>
         ))}
       </div>

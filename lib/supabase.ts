@@ -1,10 +1,13 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+export const supabase = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Koneksi Supabase Hilang! Cek file .env.local Anda.")
-}
+  if (!url || !key) {
+    console.warn("⚠️ Supabase ENV belum tersedia")
+    return null
+  }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  return createClient(url, key)
+})()
