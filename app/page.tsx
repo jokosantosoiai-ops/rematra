@@ -8,7 +8,7 @@ export default function Home() {
       </h1>
 
       <p className="mt-2">
-        Platform jual beli material konstruksi terdekat
+        Platform jual beli material sisa konstruksi terdekat
       </p>
 
       <Link
