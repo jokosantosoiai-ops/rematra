@@ -1,12 +1,25 @@
-import { supabase } from '@/lib/supabase'
+import { supabase } from "@/lib/supabase"
 
-async function fetchNearMaterials(lat: number, lng: number) {
-  const { data, error } = await supabase.rpc('get_nearby_materials', {
+// ==============================
+// FETCH MATERIAL BERDASARKAN RADIUS
+// ==============================
+export async function fetchNearMaterials(lat: number, lng: number) {
+  if (!supabase) {
+    throw new Error("Supabase client tidak tersedia")
+  }
+
+  const client = supabase
+
+  const { data, error } = await client.rpc("get_nearby_materials", {
     user_lat: lat,
     user_lng: lng,
-    radius_meters: 15000 // 15 KM
-  });
+    radius_meters: 15000, // 15 KM
+  })
 
-  if (error) console.error(error);
-  return data;
+  if (error) {
+    console.error("RPC error:", error)
+    throw error
+  }
+
+  return data
 }

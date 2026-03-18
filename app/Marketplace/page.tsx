@@ -14,9 +14,13 @@ type Material = {
   phone: string
 }
 
+type MaterialWithDistance = Material & {
+  distance?: number
+}
+
 export default function MarketplacePage() {
   const [materials, setMaterials] = useState<Material[]>([])
-  const [filtered, setFiltered] = useState<Material[]>([])
+  const [filtered, setFiltered] = useState<MaterialWithDistance[]>([])
   const [loading, setLoading] = useState(true)
 
   const [userLocation, setUserLocation] = useState<{
@@ -25,7 +29,23 @@ export default function MarketplacePage() {
   } | null>(null)
 
   // ==============================
-  // HITUNG JARAK (KM)
+  // GUARD GLOBAL
+  // ==============================
+  if (!supabase) {
+    return (
+      <div className="p-4">
+        <h1 className="text-red-500 font-bold">
+          Supabase belum terkoneksi
+        </h1>
+        <p>Cek ENV di Vercel</p>
+      </div>
+    )
+  }
+
+  const client = supabase
+
+  // ==============================
+  // HITUNG JARAK (HAVERSINE)
   // ==============================
   const calculateDistance = (
     lat1: number,
@@ -48,34 +68,29 @@ export default function MarketplacePage() {
   }
 
   // ==============================
-  // FETCH DATA
+  // FETCH DATA (AMAN)
   // ==============================
   const fetchMaterials = async () => {
-    if (!supabase) {
-      setLoading(false)
-      return
-    }
+    try {
+      const { data, error } = await client
+        .from("materials")
+        .select("*")
 
-    const { data, error } = await supabase
-      .from("materials")
-      .select("*")
+      if (error) throw error
 
-    if (error) {
-      console.error(error)
-    } else {
       setMaterials(data || [])
+    } catch (err) {
+      console.error("Fetch error:", err)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   // ==============================
-  // REALTIME UPDATE 🔥
+  // REALTIME (AMAN)
   // ==============================
   useEffect(() => {
-    if (!supabase) return
-
-    const channel = supabase
+    const channel = client
       .channel("materials-realtime")
       .on(
         "postgres_changes",
@@ -91,7 +106,7 @@ export default function MarketplacePage() {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      client.removeChannel(channel)
     }
   }, [])
 
@@ -113,7 +128,7 @@ export default function MarketplacePage() {
   }, [])
 
   // ==============================
-  // FILTER + SORT 🔥
+  // FILTER + SORT (15 KM)
   // ==============================
   useEffect(() => {
     if (!userLocation) {
@@ -121,7 +136,7 @@ export default function MarketplacePage() {
       return
     }
 
-    const result = materials
+    const result: MaterialWithDistance[] = materials
       .map((item) => {
         const distance = calculateDistance(
           userLocation.lat,
@@ -132,12 +147,15 @@ export default function MarketplacePage() {
 
         return { ...item, distance }
       })
-      .filter((item) => item.distance <= 15)
-      .sort((a, b) => a.distance - b.distance)
+      .filter((item) => item.distance !== undefined && item.distance <= 15)
+      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
 
     setFiltered(result)
   }, [materials, userLocation])
 
+  // ==============================
+  // INIT LOAD
+  // ==============================
   useEffect(() => {
     fetchMaterials()
   }, [])
@@ -147,24 +165,25 @@ export default function MarketplacePage() {
   // ==============================
   if (loading) return <p className="p-4">Loading...</p>
 
-  if (!supabase) {
-    return <p className="p-4">Supabase belum terkoneksi</p>
-  }
-
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">
-        Marketplace REMATRA (Terdekat 15 KM)
+        Marketplace REMATRA (15 KM)
       </h1>
 
+      {filtered.length === 0 && (
+        <p>Tidak ada material di sekitar Anda</p>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
-        {filtered.map((item: any) => (
+        {filtered.map((item) => (
           <div
             key={item.id}
             className="border rounded-xl p-2 shadow"
           >
             <img
               src={item.image_url}
+              alt={item.title}
               className="w-full h-32 object-cover rounded"
             />
 
@@ -180,13 +199,12 @@ export default function MarketplacePage() {
               Rp {item.price.toLocaleString()}
             </p>
 
-            {item.distance && (
+            {item.distance !== undefined && (
               <p className="text-xs text-green-600">
                 {item.distance.toFixed(2)} KM
               </p>
             )}
 
-            {/* 🔥 WHATSAPP BUTTON */}
             <a
               href={`https://wa.me/${item.phone}`}
               target="_blank"
