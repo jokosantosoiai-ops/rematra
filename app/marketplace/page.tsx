@@ -1,71 +1,59 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 
 // ==============================
-// TYPE DEFINITIONS
+// TYPES
 // ==============================
 type Material = {
   id: string
   title: string
   description: string
   price: number
-  image_url: string
-  latitude: number
-  longitude: number
-  phone: string
+  image_url: string | null
+  latitude: number | null
+  longitude: number | null
 }
 
 type MaterialWithDistance = Material & {
-  distance?: number
+  distance: number
 }
 
 export default function MarketplacePage() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [filtered, setFiltered] = useState<MaterialWithDistance[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const [userLocation, setUserLocation] = useState<{
-    lat: number
-    lng: number
-  } | null>(null)
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
 
   // ==============================
-  // FETCH DATA
+  // FETCH DATA (Memoized)
   // ==============================
-  const fetchMaterials = async () => {
+  const fetchMaterials = useCallback(async () => {
+    if (!supabase) return
+    
     try {
-      // Guard: Pastikan supabase ada sebelum query
-      if (!supabase) return
-      
-      const { data, error: fetchError } = await supabase
-        .from("materials")
-        .select("*")
-
-      if (fetchError) throw fetchError
+      const { data, error } = await supabase.from("materials").select("*")
+      if (error) throw error
       setMaterials(data || [])
     } catch (err) {
-      console.error("Fetch error:", err)
-      setError("Gagal memuat data material.")
+      console.error("Error fetching materials:", err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // ==============================
-  // REALTIME & INIT
+  // INIT + REALTIME (Safe Guarded)
   // ==============================
   useEffect(() => {
     fetchMaterials()
 
-    // Solusi Error: Simpan instance ke variable lokal untuk cleanup yang aman
-    const supabaseClient = supabase
-    if (!supabaseClient) return
+    const client = supabase
+    if (!client) return
 
-    const channel = supabaseClient
+    const channel = client
       .channel("materials-realtime")
       .on(
         "postgres_changes",
@@ -75,13 +63,12 @@ export default function MarketplacePage() {
       .subscribe()
 
     return () => {
-      // Gunakan variable lokal yang sudah dipastikan tidak null
-      supabaseClient.removeChannel(channel)
+      client.removeChannel(channel)
     }
-  }, [])
+  }, [fetchMaterials])
 
   // ==============================
-  // GEOLOCATION
+  // GEOLOCATION (High Accuracy)
   // ==============================
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
@@ -92,117 +79,132 @@ export default function MarketplacePage() {
             lng: pos.coords.longitude,
           })
         },
-        () => {
-          console.warn("User menolak akses lokasi")
-        },
+        (err) => console.warn("Akses lokasi ditolak:", err.message),
         { enableHighAccuracy: true }
       )
     }
   }, [])
 
   // ==============================
-  // DISTANCE LOGIC (15 KM)
+  // DISTANCE CALCULATION (Haversine)
+  // ==============================
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371
+    const dLat = ((lat2 - lat1) * Math.PI) / 180
+    const dLon = ((lon2 - lon1) * Math.PI) / 180
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
+  }
+
+  // ==============================
+  // FILTER RADIUS 15 KM + SORTING
   // ==============================
   useEffect(() => {
     if (!userLocation) {
-      setFiltered(materials)
+      // Jika lokasi belum ada, kita tampilkan semua tanpa filter jarak (opsional)
+      // Atau tetap kosongkan sesuai logika awal Anda: setFiltered([])
+      setFiltered([]) 
       return
     }
 
-    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-      const R = 6371
-      const dLat = ((lat2 - lat1) * Math.PI) / 180
-      const dLon = ((lon2 - lon1) * Math.PI) / 180
-      const a = 
-        Math.sin(dLat / 2) ** 2 + 
-        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
-      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
-    }
-
     const result = materials
-      .map((item) => ({
-        ...item,
-        distance: calculateDistance(userLocation.lat, userLocation.lng, item.latitude, item.longitude)
-      }))
-      .filter((item) => item.distance <= 15) // Batasan 15 KM sesuai objektif
-      .sort((a, b) => (a.distance || 0) - (b.distance || 0))
+      .filter((item) => item.latitude !== null && item.longitude !== null)
+      .map((item) => {
+        const distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          item.latitude!,
+          item.longitude!
+        )
+        return { ...item, distance }
+      })
+      .filter((item) => item.distance <= 15)
+      .sort((a, b) => a.distance - b.distance)
 
     setFiltered(result)
   }, [materials, userLocation])
 
   // ==============================
-  // RENDER UI
+  // UI LOADING STATE
   // ==============================
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white">
-      <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-      <p className="mt-4 text-sm font-medium text-gray-500">Mencari material...</p>
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen bg-white">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mb-4"></div>
+        <p className="text-gray-500 font-medium">Mencari material terdekat...</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24 font-sans">
       {/* HEADER */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-4 border-b">
-        <div className="flex items-center justify-between max-w-md mx-auto">
-          <h1 className="text-2xl font-black text-orange-600 tracking-tighter">REMATRA</h1>
-          <Link href="/upload" className="bg-orange-500 text-white px-5 py-2 rounded-full font-bold text-xs shadow-lg shadow-orange-200 active:scale-95 transition-all">
-            + JUAL SISA
-          </Link>
-        </div>
+      <header className="sticky top-0 bg-white/80 backdrop-blur-md p-4 border-b flex justify-between items-center z-50">
+        <h1 className="font-black text-2xl text-orange-600 tracking-tighter">REMATRA</h1>
+        <Link
+          href="/upload"
+          className="bg-orange-500 text-white px-6 py-2 rounded-full text-xs font-black shadow-lg shadow-orange-100 active:scale-95 transition-transform"
+        >
+          + JUAL SISA
+        </Link>
       </header>
 
-      <main className="max-w-md mx-auto p-4">
-        {/* STATUS LOKASI */}
-        <div className={`mb-6 p-3 rounded-2xl border flex items-center gap-3 transition-colors ${
-          userLocation ? 'bg-green-50 border-green-100 text-green-700' : 'bg-amber-50 border-amber-100 text-amber-700'
-        }`}>
-          <div className={`w-2 h-2 rounded-full animate-pulse ${userLocation ? 'bg-green-500' : 'bg-amber-500'}`}></div>
-          <span className="text-[11px] font-bold uppercase tracking-wider">
-            {userLocation ? 'Mode: Radius 15 KM Aktif' : 'Mode: Semua Lokasi (GPS Off)'}
-          </span>
-        </div>
-
-        {/* LIST MATERIAL */}
-        {filtered.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
-            <p className="text-gray-400 text-sm font-medium">Tidak ada material ditemukan.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {filtered.map((item) => (
-              <Link key={item.id} href={`/marketplace/${item.id}`} className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden active:bg-gray-50 transition-colors">
-                <div className="relative aspect-square">
-                  <img
-                    src={item.image_url}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
-                  {item.distance !== undefined && (
-                    <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm text-[10px] font-black px-2 py-1 rounded-lg shadow-sm border border-gray-100">
-                      {item.distance.toFixed(1)} KM
-                    </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  <h2 className="text-[13px] font-bold text-gray-800 line-clamp-2 h-8 leading-tight mb-1">
-                    {item.title}
-                  </h2>
-                  <p className="text-orange-600 font-black text-sm">
-                    Rp {item.price.toLocaleString("id-ID")}
-                  </p>
-                  <div className="mt-3 w-full bg-gray-900 text-white text-[10px] font-black py-2.5 rounded-xl text-center">
-                    DETAIL
-                  </div>
-                </div>
-              </Link>
-            ))}
+      {/* LOCATION STATUS INFO */}
+      <div className="p-4">
+        {!userLocation && (
+          <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl text-amber-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            Aktifkan GPS untuk melihat material di sekitar Anda
           </div>
         )}
+      </div>
+
+      {/* CONTENT GRID */}
+      <main className="px-4 grid grid-cols-2 gap-4 max-w-md mx-auto">
+        {filtered.length === 0 && userLocation && (
+          <div className="col-span-2 text-center py-20">
+            <p className="text-gray-400 font-medium">Tidak ada material dalam radius 15 KM.</p>
+          </div>
+        )}
+
+        {filtered.map((item) => (
+          <Link key={item.id} href={`/marketplace/${item.id}`} className="active:scale-95 transition-transform">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="relative aspect-square bg-gray-100">
+                <img
+                  src={item.image_url || "/no-image.png"}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg">
+                  {item.distance.toFixed(1)} KM
+                </div>
+              </div>
+
+              <div className="p-3">
+                <h2 className="text-xs font-bold text-gray-800 line-clamp-2 h-8 mb-1 leading-tight">
+                  {item.title}
+                </h2>
+                <p className="text-orange-600 font-black text-sm">
+                  Rp {new Intl.NumberFormat("id-ID").format(item.price)}
+                </p>
+              </div>
+            </div>
+          </Link>
+        ))}
       </main>
 
-      <footer className="mt-8 mb-4 text-center">
-        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">© 2026 REMATRA Startup</p>
+      {/* FOOTER NAV SIMULATION */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 text-center">
+         <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">© 2026 REMATRA STARTUP</p>
       </footer>
     </div>
   )
