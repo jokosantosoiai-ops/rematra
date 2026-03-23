@@ -13,7 +13,7 @@ export default function DetailPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchDetail = async () => {
+    const fetchData = async () => {
       if (!supabase || !id) return
 
       const { data, error } = await supabase
@@ -22,20 +22,28 @@ export default function DetailPage() {
         .eq("id", id)
         .single()
 
-      if (error) console.error(error)
+      if (error) {
+        console.error(error)
+      }
 
       setItem(data)
       setLoading(false)
     }
 
-    fetchDetail()
+    fetchData()
   }, [id])
 
-  if (loading) return <div className="p-10 text-center">Loading...</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading detail...</p>
+      </div>
+    )
+  }
 
   if (!item) {
     return (
-      <div className="p-10 text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center">
         <p>Data tidak ditemukan</p>
         <button onClick={() => router.push("/marketplace")}>
           Kembali
@@ -46,36 +54,51 @@ export default function DetailPage() {
 
   return (
     <div className="min-h-screen bg-white pb-32">
+
+      {/* HEADER */}
+      <div className="p-4">
+        <button onClick={() => router.back()} className="mb-2">
+          ← Kembali
+        </button>
+      </div>
+
+      {/* IMAGE */}
       <img
         src={item.image_url || "/no-image.png"}
+        onError={(e) => (e.currentTarget.src = "/no-image.png")}
         className="w-full h-64 object-cover"
       />
 
-      <div className="p-4">
+      {/* CONTENT */}
+      <div className="p-4 space-y-4">
+
         <h1 className="text-xl font-bold">{item.title}</h1>
-        <p className="text-orange-600 font-bold text-lg">
-          Rp {item.price.toLocaleString("id-ID")}
+
+        <p className="text-orange-600 text-lg font-bold">
+          Rp {item.price?.toLocaleString("id-ID")}
         </p>
 
-        <p className="mt-4 text-sm">
+        <p className="text-sm text-gray-600">
           {item.description || "Tidak ada deskripsi"}
         </p>
 
-        {/* INFO REKENING */}
-        <div className="mt-6 p-4 bg-gray-100 rounded">
-        <p>{item.bank} - {item.rekening}</p>
-        <p>a.n {item.atas_nama}</p>
+        {/* 🔥 DATA REKENING */}
+        <div className="bg-gray-100 p-4 rounded-xl">
+          <p className="font-bold text-sm mb-1">Transfer ke:</p>
+          <p>{item.bank || "-"} - {item.rekening || "-"}</p>
+          <p>a.n {item.atas_nama || "-"}</p>
         </div>
+
       </div>
 
-      {/* CTA */}
+      {/* 🔥 CTA WA */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
         <a
-          href={`https://wa.me/628XXXXXXXXXX?text=Saya mau beli ${item.title}`}
+          href={`https://wa.me/${item.phone}?text=Saya tertarik ${item.title}`}
           target="_blank"
-          className="block bg-green-500 text-white text-center py-3 rounded font-bold"
+          className="block bg-green-500 text-white text-center py-3 rounded-xl font-bold"
         >
-          Hubungi Penjual (WA)
+          Hubungi Penjual (WhatsApp)
         </a>
       </div>
     </div>
